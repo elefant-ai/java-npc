@@ -18,6 +18,12 @@ dependencies {
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }
 
+jar {
+    manifest {
+        attributes('FMLModType': 'GAMELIBRARY')
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
