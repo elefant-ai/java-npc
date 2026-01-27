@@ -4,14 +4,9 @@ import game.player2.npc.api.NpcBuilder;
 import game.player2.npc.api.NpcHandle;
 import game.player2.npc.client.Player2HttpClient;
 import game.player2.npc.config.Player2Config;
+import game.player2.npc.event.Player2EventBus;
+import game.player2.npc.event.Player2EventListener;
 import game.player2.npc.internal.NpcRegistry;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +24,33 @@ import java.util.concurrent.CompletableFuture;
  *
  * <h2>Quick Start</h2>
  * <pre>{@code
+ * // Initialize the library
+ * Player2NpcLib.initialize(
+ *     Player2Config.builder()
+ *         .apiBaseUrl("http://127.0.0.1:4315")
+ *         .gameKey("your-key")
+ *         .build()
+ * );
+ *
+ * // Register event listener
+ * Player2NpcLib.addListener(new Player2EventListener() {
+ *     @Override
+ *     public boolean onMessageEvent(NpcMessageEvent event) {
+ *         System.out.println("NPC says: " + event.getMessage());
+ *         return false;
+ *     }
+ *
+ *     @Override
+ *     public boolean onCommandEvent(NpcCommandEvent event) {
+ *         if ("minecraft_command".equals(event.getCommandName())) {
+ *             String cmd = event.getStringArgument("command");
+ *             // Execute the command
+ *             return true;
+ *         }
+ *         return false;
+ *     }
+ * });
+ *
  * // Spawn an NPC
  * Player2NpcLib.builder("shopkeeper")
  *     .name("Merchant Bob")
@@ -40,51 +62,54 @@ import java.util.concurrent.CompletableFuture;
  *         npc.chat("Steve", "Hello!");
  *     });
  *
- * // Listen for NPC responses
- * @SubscribeEvent
- * public void onNpcMessage(NpcMessageEvent event) {
- *     MinecraftHelpers.sendNpcMessage(player, "NPC", event.getMessage());
- * }
- *
- * // Listen for NPC commands
- * @SubscribeEvent
- * public void onNpcCommand(NpcCommandEvent event) {
- *     if ("minecraft_command".equals(event.getCommandName())) {
- *         String cmd = event.getStringArgument("command");
- *         MinecraftHelpers.executeCommand(server, cmd);
- *     }
- * }
+ * // Shutdown when done
+ * Player2NpcLib.shutdown();
  * }</pre>
  */
-@Mod(Player2NpcLib.MOD_ID)
 public class Player2NpcLib {
-    public static final String MOD_ID = "player2npc";
     private static final Logger LOGGER = LoggerFactory.getLogger(Player2NpcLib.class);
 
     private static volatile Player2HttpClient client;
     private static final Object clientLock = new Object();
+    private static volatile boolean initialized = false;
 
-    public Player2NpcLib(IEventBus modEventBus, ModContainer modContainer) {
-        // Register config
-        modContainer.registerConfig(ModConfig.Type.COMMON, Player2Config.SPEC);
+    private Player2NpcLib() {} // prevent instantiation
 
-        // Register lifecycle events
-        modEventBus.addListener(this::onCommonSetup);
-
-        // Register server stopping event to clean up
-        NeoForge.EVENT_BUS.addListener(this::onServerStopping);
-
+    /**
+     * Initializes the library with the given configuration.
+     * Must be called before any other API method.
+     *
+     * @param config The library configuration
+     */
+    public static void initialize(Player2Config config) {
+        Player2Config.setInstance(config);
+        initialized = true;
         LOGGER.info("Player2 NPC Library initialized");
     }
 
-    private void onCommonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            LOGGER.info("Player2 NPC Library common setup complete");
-        });
+    /**
+     * Initializes with default configuration.
+     */
+    public static void initialize() {
+        initialize(Player2Config.builder().build());
     }
 
-    private void onServerStopping(ServerStoppingEvent event) {
-        shutdown();
+    /**
+     * Registers an event listener.
+     *
+     * @param listener The listener to register
+     */
+    public static void addListener(Player2EventListener listener) {
+        Player2EventBus.getInstance().addListener(listener);
+    }
+
+    /**
+     * Removes an event listener.
+     *
+     * @param listener The listener to remove
+     */
+    public static void removeListener(Player2EventListener listener) {
+        Player2EventBus.getInstance().removeListener(listener);
     }
 
     // ==================== Public API ====================
@@ -96,6 +121,7 @@ public class Player2NpcLib {
      * @return A new NpcBuilder instance
      */
     public static NpcBuilder builder(String shortName) {
+        checkInitialized();
         return new NpcBuilder(shortName, getOrCreateClient());
     }
 
@@ -169,8 +195,7 @@ public class Player2NpcLib {
     /**
      * Shuts down all connections and cleans up resources.
      * <p>
-     * Called automatically when the server stops, but can be
-     * called manually if needed.
+     * Must be called manually when the application shuts down.
      * </p>
      */
     public static void shutdown() {
@@ -182,12 +207,16 @@ public class Player2NpcLib {
             }
         }
         NpcRegistry.getInstance().clear();
+        Player2EventBus.getInstance().clearListeners();
+        Player2Config.clearInstance();
+        initialized = false;
     }
 
     /**
      * Gets the HTTP client instance, creating it if necessary.
      */
     static Player2HttpClient getOrCreateClient() {
+        checkInitialized();
         if (client == null) {
             synchronized (clientLock) {
                 if (client == null) {
@@ -199,5 +228,12 @@ public class Player2NpcLib {
             }
         }
         return client;
+    }
+
+    private static void checkInitialized() {
+        if (!initialized) {
+            throw new IllegalStateException(
+                "Player2NpcLib not initialized. Call Player2NpcLib.initialize() first.");
+        }
     }
 }

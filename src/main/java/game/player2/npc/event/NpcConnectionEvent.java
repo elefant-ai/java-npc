@@ -1,25 +1,25 @@
 package game.player2.npc.event;
 
-import net.neoforged.bus.api.Event;
-
 /**
  * Fired when the SSE connection status changes for NPC responses.
  * <p>
- * Listen for this event on {@code NeoForge.EVENT_BUS}.
+ * Register a {@link Player2EventListener} to receive these events.
  * </p>
  *
  * <pre>{@code
- * @SubscribeEvent
- * public void onNpcConnection(NpcConnectionEvent event) {
- *     switch (event.getStatus()) {
- *         case CONNECTED -> LOGGER.info("Connected to NPC service");
- *         case DISCONNECTED -> LOGGER.warn("Disconnected: {}", event.getMessage());
- *         case RECONNECTING -> LOGGER.info("Reconnecting...");
+ * Player2NpcLib.addListener(new Player2EventListener() {
+ *     @Override
+ *     public void onConnectionEvent(NpcConnectionEvent event) {
+ *         switch (event.getStatus()) {
+ *             case CONNECTED -> LOGGER.info("Connected to NPC service");
+ *             case DISCONNECTED -> LOGGER.warn("Disconnected: {}", event.getMessage());
+ *             case RECONNECTING -> LOGGER.info("Reconnecting...");
+ *         }
  *     }
- * }
+ * });
  * }</pre>
  */
-public class NpcConnectionEvent extends Event {
+public class NpcConnectionEvent {
     private final String gameId;
     private final Status status;
     private final String message;

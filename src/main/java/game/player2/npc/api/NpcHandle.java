@@ -82,7 +82,7 @@ public class NpcHandle {
      * Sends a chat message to this NPC.
      * <p>
      * Response will be delivered via {@link game.player2.npc.event.NpcMessageEvent}
-     * on the NeoForge event bus.
+     * to registered {@link game.player2.npc.event.Player2EventListener} instances.
      * </p>
      *
      * @param senderName The name of the player/entity sending the message

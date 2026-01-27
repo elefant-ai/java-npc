@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import game.player2.npc.dto.ChatRequest;
 import game.player2.npc.dto.SpawnNpcRequest;
 import game.player2.npc.event.NpcErrorEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import game.player2.npc.event.Player2EventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +88,7 @@ public class Player2HttpClient {
             })
             .exceptionally(ex -> {
                 LOGGER.error("Error spawning NPC in game {}", gameId, ex);
-                NeoForge.EVENT_BUS.post(new NpcErrorEvent(
+                Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
                     NpcErrorEvent.ErrorType.HTTP_ERROR,
                     "Failed to spawn NPC: " + ex.getMessage(),
                     null, gameId, ex
@@ -127,7 +127,7 @@ public class Player2HttpClient {
             })
             .exceptionally(ex -> {
                 LOGGER.error("Error sending chat to NPC {} in game {}", npcId, gameId, ex);
-                NeoForge.EVENT_BUS.post(new NpcErrorEvent(
+                Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
                     NpcErrorEvent.ErrorType.HTTP_ERROR,
                     "Failed to send chat: " + ex.getMessage(),
                     npcId, gameId, ex
@@ -163,7 +163,7 @@ public class Player2HttpClient {
             })
             .exceptionally(ex -> {
                 LOGGER.error("Error killing NPC {} in game {}", npcId, gameId, ex);
-                NeoForge.EVENT_BUS.post(new NpcErrorEvent(
+                Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
                     NpcErrorEvent.ErrorType.HTTP_ERROR,
                     "Failed to kill NPC: " + ex.getMessage(),
                     npcId, gameId, ex
@@ -262,7 +262,7 @@ public class Player2HttpClient {
             default -> errorType = NpcErrorEvent.ErrorType.HTTP_ERROR;
         }
 
-        NeoForge.EVENT_BUS.post(new NpcErrorEvent(
+        Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
             errorType,
             "Failed to " + operation + ": HTTP " + response.statusCode(),
             npcId, gameId, null

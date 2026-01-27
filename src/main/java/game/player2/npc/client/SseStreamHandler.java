@@ -7,7 +7,7 @@ import game.player2.npc.event.NpcCommandEvent;
 import game.player2.npc.event.NpcConnectionEvent;
 import game.player2.npc.event.NpcErrorEvent;
 import game.player2.npc.event.NpcMessageEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import game.player2.npc.event.Player2EventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Handles SSE stream connection and fires NeoForge events for NPC responses.
+ * Handles SSE stream connection and fires events for NPC responses.
  * Implements automatic reconnection with exponential backoff.
  */
 public class SseStreamHandler {
@@ -100,7 +100,7 @@ public class SseStreamHandler {
         }
 
         running.set(false);
-        NeoForge.EVENT_BUS.post(new NpcConnectionEvent(
+        Player2EventBus.getInstance().postConnectionEvent(new NpcConnectionEvent(
             gameId, NpcConnectionEvent.Status.DISCONNECTED, "Stream stopped"
         ));
     }
@@ -124,7 +124,7 @@ public class SseStreamHandler {
 
         reconnectAttempts.set(0);
 
-        NeoForge.EVENT_BUS.post(new NpcConnectionEvent(
+        Player2EventBus.getInstance().postConnectionEvent(new NpcConnectionEvent(
             gameId, NpcConnectionEvent.Status.CONNECTED, "Connected to SSE stream"
         ));
 
@@ -173,7 +173,7 @@ public class SseStreamHandler {
                 NpcMessageEvent messageEvent = new NpcMessageEvent(
                     npcId, gameId, message, audioData
                 );
-                NeoForge.EVENT_BUS.post(messageEvent);
+                Player2EventBus.getInstance().postMessageEvent(messageEvent);
 
                 LOGGER.debug("Fired NpcMessageEvent for NPC {} in game {}", npcId, gameId);
             }
@@ -184,7 +184,7 @@ public class SseStreamHandler {
                     NpcCommandEvent commandEvent = new NpcCommandEvent(
                         npcId, gameId, cmd.getName(), cmd.getArgumentsJson()
                     );
-                    NeoForge.EVENT_BUS.post(commandEvent);
+                    Player2EventBus.getInstance().postCommandEvent(commandEvent);
 
                     LOGGER.debug("Fired NpcCommandEvent for command '{}' from NPC {} in game {}",
                         cmd.getName(), npcId, gameId);
@@ -193,7 +193,7 @@ public class SseStreamHandler {
 
         } catch (Exception e) {
             LOGGER.error("Error processing SSE line: {}", line, e);
-            NeoForge.EVENT_BUS.post(new NpcErrorEvent(
+            Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
                 NpcErrorEvent.ErrorType.PARSE_ERROR,
                 "Failed to parse NPC response: " + e.getMessage(),
                 null, gameId, e
@@ -203,7 +203,7 @@ public class SseStreamHandler {
 
     private void handleDisconnect(Exception e) {
         LOGGER.warn("SSE stream disconnected for game {}: {}", gameId, e.getMessage());
-        NeoForge.EVENT_BUS.post(new NpcConnectionEvent(
+        Player2EventBus.getInstance().postConnectionEvent(new NpcConnectionEvent(
             gameId, NpcConnectionEvent.Status.DISCONNECTED, e.getMessage()
         ));
     }
@@ -214,7 +214,7 @@ public class SseStreamHandler {
         if (attempts > MAX_RECONNECT_ATTEMPTS) {
             LOGGER.error("Max reconnection attempts ({}) reached for game {}",
                 MAX_RECONNECT_ATTEMPTS, gameId);
-            NeoForge.EVENT_BUS.post(new NpcConnectionEvent(
+            Player2EventBus.getInstance().postConnectionEvent(new NpcConnectionEvent(
                 gameId, NpcConnectionEvent.Status.RECONNECT_FAILED,
                 "Exceeded maximum reconnection attempts"
             ));
@@ -231,7 +231,7 @@ public class SseStreamHandler {
         LOGGER.info("Attempting reconnect {} of {} for game {} in {}ms",
             attempts, MAX_RECONNECT_ATTEMPTS, gameId, delay);
 
-        NeoForge.EVENT_BUS.post(new NpcConnectionEvent(
+        Player2EventBus.getInstance().postConnectionEvent(new NpcConnectionEvent(
             gameId, NpcConnectionEvent.Status.RECONNECTING,
             "Reconnecting (attempt " + attempts + ")"
         ));

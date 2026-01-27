@@ -1,27 +1,27 @@
 package game.player2.npc.event;
 
-import net.neoforged.bus.api.Event;
-
 import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
  * Fired when an error occurs in NPC operations.
  * <p>
- * Listen for this event on {@code NeoForge.EVENT_BUS}.
+ * Register a {@link Player2EventListener} to receive these events.
  * </p>
  *
  * <pre>{@code
- * @SubscribeEvent
- * public void onNpcError(NpcErrorEvent event) {
- *     LOGGER.error("NPC error ({}): {}", event.getType(), event.getMessage());
- *     if (event.getCause() != null) {
- *         event.getCause().printStackTrace();
+ * Player2NpcLib.addListener(new Player2EventListener() {
+ *     @Override
+ *     public void onErrorEvent(NpcErrorEvent event) {
+ *         LOGGER.error("NPC error ({}): {}", event.getType(), event.getMessage());
+ *         if (event.getCause() != null) {
+ *             event.getCause().printStackTrace();
+ *         }
  *     }
- * }
+ * });
  * }</pre>
  */
-public class NpcErrorEvent extends Event {
+public class NpcErrorEvent {
     private final ErrorType type;
     private final String message;
     @Nullable

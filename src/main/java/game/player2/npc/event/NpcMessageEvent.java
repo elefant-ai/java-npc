@@ -1,8 +1,5 @@
 package game.player2.npc.event;
 
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
-
 import javax.annotation.Nullable;
 import java.util.Base64;
 import java.util.UUID;
@@ -10,20 +7,22 @@ import java.util.UUID;
 /**
  * Fired when an NPC sends a text message response.
  * <p>
- * This event is cancellable - cancelling it prevents the default message handling.
- * Listen for this event on {@code NeoForge.EVENT_BUS}.
+ * Return {@code true} from {@link Player2EventListener#onMessageEvent} to consume this event.
  * </p>
  *
  * <pre>{@code
- * @SubscribeEvent
- * public void onNpcMessage(NpcMessageEvent event) {
- *     String message = event.getMessage();
- *     UUID npcId = event.getNpcId();
- *     // Handle the NPC response
- * }
+ * Player2NpcLib.addListener(new Player2EventListener() {
+ *     @Override
+ *     public boolean onMessageEvent(NpcMessageEvent event) {
+ *         String message = event.getMessage();
+ *         UUID npcId = event.getNpcId();
+ *         // Handle the NPC response
+ *         return false;
+ *     }
+ * });
  * }</pre>
  */
-public class NpcMessageEvent extends Event implements ICancellableEvent {
+public class NpcMessageEvent {
     private final UUID npcId;
     private final String gameId;
     private final String message;

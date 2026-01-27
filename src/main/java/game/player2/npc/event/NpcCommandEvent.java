@@ -3,31 +3,30 @@ package game.player2.npc.event;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
 
 import java.util.UUID;
 
 /**
  * Fired when an NPC requests to execute a function/command.
  * <p>
- * Handlers should process the function call and may cancel to prevent
- * other handlers from processing it.
- * Listen for this event on {@code NeoForge.EVENT_BUS}.
+ * Return {@code true} from {@link Player2EventListener#onCommandEvent} to consume this event.
  * </p>
  *
  * <pre>{@code
- * @SubscribeEvent
- * public void onNpcCommand(NpcCommandEvent event) {
- *     if ("minecraft_command".equals(event.getCommandName())) {
- *         String cmd = event.getStringArgument("command");
- *         // Execute the command
- *         event.setCanceled(true);
+ * Player2NpcLib.addListener(new Player2EventListener() {
+ *     @Override
+ *     public boolean onCommandEvent(NpcCommandEvent event) {
+ *         if ("minecraft_command".equals(event.getCommandName())) {
+ *             String cmd = event.getStringArgument("command");
+ *             // Execute the command
+ *             return true;
+ *         }
+ *         return false;
  *     }
- * }
+ * });
  * }</pre>
  */
-public class NpcCommandEvent extends Event implements ICancellableEvent {
+public class NpcCommandEvent {
     private static final Gson GSON = new Gson();
 
     private final UUID npcId;
