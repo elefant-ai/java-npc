@@ -8,6 +8,7 @@ import game.player2.npc.internal.NpcRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,7 @@ public class NpcBuilder {
     private String voiceId = "";
     private final List<NpcFunction> functions = new ArrayList<>();
     private Boolean keepGameState = null;
+    private UUID existingNpcId = null;
 
     public NpcBuilder(String shortName, Player2HttpClient client) {
         this.shortName = Objects.requireNonNull(shortName, "shortName cannot be null");
@@ -120,6 +122,17 @@ public class NpcBuilder {
     }
 
     /**
+     * Resumes an NPC from a previous session using its ID.
+     * This allows the NPC to retain conversation history and memories.
+     *
+     * @param npcId The UUID of a previously spawned NPC
+     */
+    public NpcBuilder resumeFrom(UUID npcId) {
+        this.existingNpcId = npcId;
+        return this;
+    }
+
+    /**
      * Spawns the NPC asynchronously.
      * <p>
      * This will also start the SSE stream for the game if not already active.
@@ -144,7 +157,8 @@ public class NpcBuilder {
             systemPrompt,
             voiceId,
             commandDtos,
-            keepGameState
+            keepGameState,
+            existingNpcId
         );
 
         return client.spawnNpc(gameId, request)

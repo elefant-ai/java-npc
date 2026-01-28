@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Request body for spawning a new NPC.
@@ -30,9 +31,14 @@ public class SpawnNpcRequest {
     @Nullable
     private final Boolean keepGameState;
 
+    @SerializedName("npc_id")
+    @Nullable
+    private final String npcId;
+
     public SpawnNpcRequest(String shortName, String name, String characterDescription,
                           String systemPrompt, String voiceId,
-                          @Nullable List<Function> commands, @Nullable Boolean keepGameState) {
+                          @Nullable List<Function> commands, @Nullable Boolean keepGameState,
+                          @Nullable UUID npcId) {
         this.shortName = shortName;
         this.name = name;
         this.characterDescription = characterDescription;
@@ -40,6 +46,7 @@ public class SpawnNpcRequest {
         this.voiceId = voiceId;
         this.commands = commands;
         this.keepGameState = keepGameState;
+        this.npcId = npcId != null ? npcId.toString() : null;
     }
 
     public String getShortName() {
@@ -70,5 +77,10 @@ public class SpawnNpcRequest {
     @Nullable
     public Boolean getKeepGameState() {
         return keepGameState;
+    }
+
+    @Nullable
+    public String getNpcId() {
+        return npcId;
     }
 }
