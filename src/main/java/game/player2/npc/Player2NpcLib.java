@@ -2,6 +2,7 @@ package game.player2.npc;
 
 import game.player2.npc.api.NpcBuilder;
 import game.player2.npc.api.NpcHandle;
+import game.player2.npc.client.ChatCompletionsClient;
 import game.player2.npc.client.Player2HttpClient;
 import game.player2.npc.config.Player2Config;
 import game.player2.npc.event.Player2EventBus;
@@ -70,6 +71,7 @@ public class Player2NpcLib {
     private static final Logger LOGGER = LoggerFactory.getLogger(Player2NpcLib.class);
 
     private static volatile Player2HttpClient client;
+    private static volatile ChatCompletionsClient chatCompletionsClient;
     private static final Object clientLock = new Object();
     private static volatile boolean initialized = false;
 
@@ -193,6 +195,24 @@ public class Player2NpcLib {
     }
 
     /**
+     * Returns the ChatCompletionsClient for making /v1/chat/completions calls.
+     * Lazily creates the client on first access.
+     *
+     * @return The ChatCompletionsClient instance
+     */
+    public static ChatCompletionsClient getChatCompletionsClient() {
+        checkInitialized();
+        if (chatCompletionsClient == null) {
+            synchronized (clientLock) {
+                if (chatCompletionsClient == null) {
+                    chatCompletionsClient = new ChatCompletionsClient();
+                }
+            }
+        }
+        return chatCompletionsClient;
+    }
+
+    /**
      * Shuts down all connections and cleans up resources.
      * <p>
      * Must be called manually when the application shuts down.
@@ -204,6 +224,10 @@ public class Player2NpcLib {
                 LOGGER.info("Shutting down Player2 NPC Library...");
                 client.shutdown();
                 client = null;
+            }
+            if (chatCompletionsClient != null) {
+                chatCompletionsClient.shutdown();
+                chatCompletionsClient = null;
             }
         }
         NpcRegistry.getInstance().clear();
