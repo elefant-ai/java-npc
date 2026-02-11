@@ -4,6 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import game.player2.npc.dto.ChatRequest;
 import game.player2.npc.dto.SpawnNpcRequest;
+import game.player2.npc.dto.TtsSpeakRequest;
+import game.player2.npc.dto.TtsSpeakResponse;
+import game.player2.npc.dto.TtsVoice;
+import game.player2.npc.dto.TtsVoicesResponse;
 import game.player2.npc.event.NpcErrorEvent;
 import game.player2.npc.event.Player2EventBus;
 import org.slf4j.Logger;
@@ -14,6 +18,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -241,6 +246,103 @@ public class Player2HttpClient {
      */
     public boolean isStreamActive(String gameId) {
         return activeStreams.containsKey(gameId);
+    }
+
+    // ==================== TTS API ====================
+
+    /**
+     * Speaks text aloud via the Player2 app's TTS engine.
+     *
+     * @param request The TTS speak request
+     * @return CompletableFuture with the TTS response
+     */
+    public CompletableFuture<TtsSpeakResponse> ttsSpeak(TtsSpeakRequest request) {
+        String url = baseUrl + "/v1/tts/speak";
+        String body = gson.toJson(request);
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header(GAME_KEY_HEADER, gameKey)
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .timeout(Duration.ofSeconds(30))
+            .build();
+
+        return httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
+            .thenApply(response -> {
+                if (response.statusCode() != 200) {
+                    handleHttpError(response, "TTS speak", null, null);
+                    throw new RuntimeException("Failed TTS speak: HTTP " +
+                        response.statusCode() + " - " + response.body());
+                }
+                return gson.fromJson(response.body(), TtsSpeakResponse.class);
+            })
+            .exceptionally(ex -> {
+                LOGGER.error("Error calling TTS speak", ex);
+                Player2EventBus.getInstance().postErrorEvent(new NpcErrorEvent(
+                    NpcErrorEvent.ErrorType.HTTP_ERROR,
+                    "Failed TTS speak: " + ex.getMessage(),
+                    null, null, ex
+                ));
+                return null;
+            });
+    }
+
+    /**
+     * Stops any currently playing TTS audio.
+     *
+     * @return CompletableFuture that completes when playback is stopped
+     */
+    public CompletableFuture<Void> ttsStop() {
+        String url = baseUrl + "/v1/tts/stop";
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header(GAME_KEY_HEADER, gameKey)
+            .POST(HttpRequest.BodyPublishers.noBody())
+            .timeout(Duration.ofSeconds(10))
+            .build();
+
+        return httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.discarding())
+            .thenAccept(response -> {
+                if (response.statusCode() != 200) {
+                    LOGGER.warn("TTS stop returned HTTP {}", response.statusCode());
+                }
+            })
+            .exceptionally(ex -> {
+                LOGGER.warn("Error stopping TTS: {}", ex.getMessage());
+                return null;
+            });
+    }
+
+    /**
+     * Lists available TTS voices.
+     *
+     * @return CompletableFuture with the list of available voices
+     */
+    public CompletableFuture<List<TtsVoice>> ttsGetVoices() {
+        String url = baseUrl + "/v1/tts/voices";
+
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header(GAME_KEY_HEADER, gameKey)
+            .GET()
+            .timeout(Duration.ofSeconds(10))
+            .build();
+
+        return httpClient.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
+            .thenApply(response -> {
+                if (response.statusCode() != 200) {
+                    handleHttpError(response, "TTS get voices", null, null);
+                    throw new RuntimeException("Failed to get voices: HTTP " + response.statusCode());
+                }
+                TtsVoicesResponse parsed = gson.fromJson(response.body(), TtsVoicesResponse.class);
+                return parsed.getVoices();
+            })
+            .exceptionally(ex -> {
+                LOGGER.error("Error getting TTS voices", ex);
+                return List.of();
+            });
     }
 
     /**
