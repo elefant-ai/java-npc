@@ -4,12 +4,17 @@ import game.player2.npc.api.NpcBuilder;
 import game.player2.npc.api.NpcHandle;
 import game.player2.npc.client.Player2HttpClient;
 import game.player2.npc.config.Player2Config;
+import game.player2.npc.dto.TtsSpeakRequest;
+import game.player2.npc.dto.TtsSpeakResponse;
+import game.player2.npc.dto.TtsVoice;
 import game.player2.npc.event.Player2EventBus;
 import game.player2.npc.event.Player2EventListener;
 import game.player2.npc.internal.NpcRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -190,6 +195,65 @@ public class Player2NpcLib {
      */
     public static CompletableFuture<Boolean> checkHealth() {
         return getOrCreateClient().checkHealth();
+    }
+
+    // ==================== TTS API ====================
+
+    /**
+     * Speaks text aloud through the Player2 desktop app.
+     * The audio plays in the Player2 app directly ({@code play_in_app=true}).
+     *
+     * @param text The text to speak
+     * @return CompletableFuture that completes when the request is accepted
+     */
+    public static CompletableFuture<Void> ttsSpeak(String text) {
+        return ttsSpeak(text, null, 1.0);
+    }
+
+    /**
+     * Speaks text aloud through the Player2 desktop app with a specific voice and speed.
+     *
+     * @param text The text to speak
+     * @param voiceId Optional voice ID (null for default)
+     * @param speed Speech speed (0.25-4.0, default 1.0)
+     * @return CompletableFuture that completes when the request is accepted
+     */
+    public static CompletableFuture<Void> ttsSpeak(String text, @Nullable String voiceId, double speed) {
+        TtsSpeakRequest request = new TtsSpeakRequest(
+            text, true, speed,
+            voiceId != null ? List.of(voiceId) : null,
+            null, null, null, null
+        );
+        return getOrCreateClient().ttsSpeak(request)
+            .thenAccept(response -> { /* play_in_app=true, nothing to do with response */ });
+    }
+
+    /**
+     * Speaks text with a full TTS request for advanced usage.
+     *
+     * @param request The TTS speak request
+     * @return CompletableFuture with the TTS response
+     */
+    public static CompletableFuture<TtsSpeakResponse> ttsSpeak(TtsSpeakRequest request) {
+        return getOrCreateClient().ttsSpeak(request);
+    }
+
+    /**
+     * Stops any currently playing TTS audio.
+     *
+     * @return CompletableFuture that completes when playback is stopped
+     */
+    public static CompletableFuture<Void> ttsStop() {
+        return getOrCreateClient().ttsStop();
+    }
+
+    /**
+     * Lists available TTS voices.
+     *
+     * @return CompletableFuture with the list of voices
+     */
+    public static CompletableFuture<List<TtsVoice>> ttsGetVoices() {
+        return getOrCreateClient().ttsGetVoices();
     }
 
     /**
